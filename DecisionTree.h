@@ -17,6 +17,7 @@
 #include <png++/png.hpp>
 
 using namespace std;
+using namespace png;
 
 #ifndef DECISIONTREE_H_
 #define DECISIONTREE_H_

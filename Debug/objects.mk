@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lglut -lGLU -lGL -lIL -lboost_thread -lboost_system
+LIBS := -lglut -lpng -lGLU -lGL -lIL -lboost_thread -lboost_system
 

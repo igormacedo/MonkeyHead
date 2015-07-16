@@ -4,9 +4,11 @@
 #include <chrono>
 #include <thread>
 #include <ctime>
+#include <png++/png.hpp>
 #include "DecisionTree.h"
-using namespace std;
 
+using namespace std;
+using namespace png;
 
 
 #define DEFAULT_WIDTH  1280
@@ -16,7 +18,7 @@ int width  = DEFAULT_WIDTH;
 int height = DEFAULT_HEIGHT;
 
 GLuint texid[2];
-ILuint image[2];
+ILuint img[2];
 
 bool fullscreen = false;
 
@@ -39,7 +41,7 @@ void display()
 
 	//glGenTextures(1, &texid[0]);
 	glBindTexture(GL_TEXTURE_2D, texid[0]);
-	ilBindImage(image[0]);
+	ilBindImage(img[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); /* We will use linear interpolation for magnification filter */
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* We will use linear interpolation for minifying filter */
     glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT),
@@ -55,7 +57,7 @@ void display()
 
 	//glGenTextures(1, &texid[1]);
 	glBindTexture(GL_TEXTURE_2D, texid[1]);
-	ilBindImage(image[1]);
+	ilBindImage(img[1]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); /* We will use linear interpolation for magnification filter */
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* We will use linear interpolation for minifying filter */
 	glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT),
@@ -162,25 +164,39 @@ void specialKeyboard(int key, int x, int y)
 			cout << "Error creating PixelList!";
 		}
 	}
+
+	if (key == GLUT_KEY_F3)
+	{
+		cout << "Opening Image" << endl;
+		png::image<png::rgb_pixel> img("/home/igormacedo/Blender/images/color0.png");
+
+		rgb_pixel pixel = img[119][159];
+		cout << "RED:" << (int)pixel.red << " GREEN:" << (int)pixel.green << " BLUE:" << (int) pixel.blue << endl;
+
+		img.read("/home/igormacedo/Blender/images/color12.png");
+		pixel = img[60][60];
+		cout << "RED:" << (int)pixel.red << " GREEN:" << (int)pixel.green << " BLUE:" << (int) pixel.blue << endl;
+
+	}
 }
 
 PixelList* createPixelList()
 {
 	PixelList* pList = new PixelList();
 
-	for(int im = 0; im < 1; im++)
+	for(int im = 0; im < 25; im++)
 	{
 		ostringstream st;
 		st << im;
 
 		char* path;
 		path = &(cPath + st.str() + string(".png"))[0];
-		image[0] = LoadImage(path);
+		img[0] = LoadImage(path);
 
 		path = &(dPath + st.str() + string(".png"))[0];
-		image[1] = LoadImage(path);
+		img[1] = LoadImage(path);
 
-		if(image[0] == -1 || image[1] == -1)
+		if(img[0] == -1 || img[1] == -1)
 		{
 			PixelList* p;
 			return p;
@@ -195,7 +211,7 @@ PixelList* createPixelList()
 			for(int y = 0; y <= imageHeight; y++)
 			{
 
-				ilBindImage(image[1]);
+				ilBindImage(img[1]);
 				ILuint depthPixel;
 				ilCopyPixels(x,y,0,1,1,1,IL_RGB,IL_UNSIGNED_BYTE,&depthPixel);
 
@@ -207,7 +223,7 @@ PixelList* createPixelList()
 				pixel->image = im;
 
 				ILuint colorPixel;
-				ilBindImage(image[0]);
+				ilBindImage(img[0]);
 				ilCopyPixels(x,y,0,1,1,1,IL_RGB,IL_UNSIGNED_BYTE,&colorPixel);
 
 
@@ -236,7 +252,7 @@ PixelList* createPixelList()
 			}
 		}
 
-		ilDeleteImages(2, image);
+		ilDeleteImages(2, img);
 	}
 
 	return pList;
@@ -269,8 +285,8 @@ int main(int argc, char **argv)
 	}
 	ilInit();
 
-	image[0] = LoadImage(argv[1]);
-	if(image[0] == -1)
+	img[0] = LoadImage(argv[1]);
+	if(img[0] == -1)
 	{
 		cout << "Could not load image" << argv[1] << " by DevIL" << endl;
 		return -1;
@@ -280,8 +296,8 @@ int main(int argc, char **argv)
 	cout << "data1: " << data1 << endl;
 
 
-    image[1] = LoadImage(argv[2]);
-	if(image[1] == -1)
+    img[1] = LoadImage(argv[2]);
+	if(img[1] == -1)
 	{
 		cout << "Could not load image" << argv[2] << " by DevIL" << endl;
 		return -1;
@@ -302,7 +318,7 @@ int main(int argc, char **argv)
     glutMainLoop();
 
     //ILuint i = (ILuint) image;
-    ilDeleteImages(2, image);
+    ilDeleteImages(2, img);
     //glDeleteTextures(1, &texid[0]);
     //glDeleteTextures(1, &texid[1]);
     return 0;
