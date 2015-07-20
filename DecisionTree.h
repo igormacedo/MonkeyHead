@@ -35,47 +35,6 @@ typedef struct Pixel
 
 }Pixel;
 
-typedef struct FeatureDefinition
-{
-	int radius;
-	float angle;
-	float ratio;
-	double infoGain;
-
-	FeatureDefinition()
-	{
-		this->radius = 0;
-		this->angle = 0.0;
-		this->ratio = 0.0;
-		this->infoGain = 0.0;
-	}
-
-	FeatureDefinition(int radius, float angle)
-	{
-		this->radius = radius;
-		this->angle = angle;
-		this->ratio = 0.0;
-		this->infoGain = 0.0;
-	}
-
-	FeatureDefinition(int radius, float angle, float ratio)
-	{
-		this->radius = radius;
-		this->angle = angle;
-		this->ratio = ratio;
-		this->infoGain = 0.0;
-	}
-
-	void clear()
-	{
-		this->radius = 0;
-		this->angle = 0.0;
-		this->ratio = 0.0;
-		this->infoGain = DBL_MAX;
-	}
-
-}FeatureDefinition;
-
 typedef struct PixelList
 {
 	list<Pixel*> pList;
@@ -138,14 +97,79 @@ typedef struct PixelList
 
 }PixelList;
 
+typedef struct FeatureDefinition
+{
+	int radius;
+	float angle;
+	float ratio;
+	double infoGain;
+	PixelList* rightList = NULL;
+	PixelList* leftList = NULL;
+	double entropy = 0.0;
+
+	FeatureDefinition()
+	{
+		this->radius = 0;
+		this->angle = 0.0;
+		this->ratio = 0.0;
+		this->infoGain = 0.0;
+	}
+
+	FeatureDefinition(int radius, float angle)
+	{
+		this->radius = radius;
+		this->angle = angle;
+		this->ratio = 0.0;
+		this->infoGain = 0.0;
+	}
+
+	FeatureDefinition(int radius, float angle, float ratio)
+	{
+		this->radius = radius;
+		this->angle = angle;
+		this->ratio = ratio;
+		this->infoGain = 0.0;
+	}
+
+	void clear()
+	{
+		this->radius = 0;
+		this->angle = 0.0;
+		this->ratio = 0.0;
+		this->infoGain = DBL_MAX;
+		this->entropy = 0.0;
+		this->rightList = NULL;
+		this->leftList = NULL;
+	}
+
+}FeatureDefinition;
+
 typedef struct TreeNode
 {
 	TreeNode* leftNode;
 	TreeNode* rightNode;
+	TreeNode* parent;
+	int level;
 
 	FeatureDefinition feature;
 
-	PixelList pList;
+	PixelList* pList = NULL;
+
+	TreeNode()
+	{
+		this->leftNode = NULL;
+		this->rightNode = NULL;
+		this->parent = NULL;
+		this->level = 1;
+	}
+
+	TreeNode(int level, TreeNode* parent)
+	{
+		this->rightNode = NULL;
+		this->leftNode = NULL;
+		this->level = level;
+		this->parent = parent;
+	}
 
 }TreeNode;
 
@@ -154,13 +178,20 @@ public:
 	DecisionTree();
 	virtual ~DecisionTree();
 	FeatureDefinition MaximizeInfoGain(PixelList);
+	void CreateTree(PixelList*);
+	void classifyImage(png::image<rgb_pixel>);
 
 private:
+	TreeNode* head;
+	list<TreeNode> myTree;
+
 	double H(double, double);
 	int LoadImage(string);
 	double CalculateInformationGain(PixelList, PixelList);
 	void threadInfoGainMiximizer(PixelList, int, int);
 	bool updateMainFeature(FeatureDefinition);
+	double totalEntropy(PixelList);
+	Color defineColor(TreeNode*);
 
 };
 

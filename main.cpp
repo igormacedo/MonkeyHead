@@ -17,8 +17,8 @@ using namespace png;
 int width  = DEFAULT_WIDTH;
 int height = DEFAULT_HEIGHT;
 
-GLuint texid[2];
-ILuint img[2];
+GLuint texid[4];
+ILuint img[4];
 
 bool fullscreen = false;
 
@@ -33,13 +33,13 @@ void display();
 void init(int width, int height);
 int LoadImage(char* filename);
 void specialKeyboard(int key, int x, int y);
+void evaluateImage();
 
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 
-	//glGenTextures(1, &texid[0]);
 	glBindTexture(GL_TEXTURE_2D, texid[0]);
 	ilBindImage(img[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); /* We will use linear interpolation for magnification filter */
@@ -54,8 +54,6 @@ void display()
 	    glTexCoord2i(1, 0); glVertex2i(width/2-150, 50);
 	glEnd();
 
-
-	//glGenTextures(1, &texid[1]);
 	glBindTexture(GL_TEXTURE_2D, texid[1]);
 	ilBindImage(img[1]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); /* We will use linear interpolation for magnification filter */
@@ -70,7 +68,36 @@ void display()
 		    glTexCoord2i(1, 0); glVertex2i(width-50, 50);
 	glEnd();
 
+	glBindTexture(GL_TEXTURE_2D, texid[2]);
+	ilBindImage(img[2]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); /* We will use linear interpolation for magnification filter */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* We will use linear interpolation for minifying filter */
+	glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT),
+	 0, ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE, ilGetData());
+
+	glBegin(GL_QUADS);
+			glTexCoord2i(0,0); glVertex2i(50,height/2 + 30);
+		    glTexCoord2i(0,1); glVertex2i(50,   height-50);
+		    glTexCoord2i(1, 1); glVertex2i(width/2-150, height-50);
+		    glTexCoord2i(1, 0); glVertex2i(width/2-150, height/2 + 30);
+	glEnd();
+
+	glBindTexture(GL_TEXTURE_2D, texid[3]);
+	ilBindImage(img[3]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); /* We will use linear interpolation for magnification filter */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); /* We will use linear interpolation for minifying filter */
+	glTexImage2D(GL_TEXTURE_2D, 0, ilGetInteger(IL_IMAGE_BPP), ilGetInteger(IL_IMAGE_WIDTH), ilGetInteger(IL_IMAGE_HEIGHT),
+	 0, ilGetInteger(IL_IMAGE_FORMAT), GL_UNSIGNED_BYTE, ilGetData());
+
+	glBegin(GL_QUADS);
+			glTexCoord2i(0, 0); glVertex2i(width/2+150,height/2 + 30);
+		    glTexCoord2i(0, 1); glVertex2i(width/2+150,   height-50);
+		    glTexCoord2i(1, 1); glVertex2i(width-50, height-50);
+		    glTexCoord2i(1, 0); glVertex2i(width-50, height/2 + 30);
+	glEnd();
+
 	glutSwapBuffers();
+
 }
 
 void init(int width, int height)
@@ -88,7 +115,7 @@ void init(int width, int height)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	cout << "texture 1 : " << texid[0] << "|| texture 2: " << texid[1] << endl;
-	glGenTextures(2, texid);
+	glGenTextures(4, texid);
 	cout << "texture 1 : " << texid[0] << "|| texture 2: " << texid[1] << endl;
 	//glGenTextures(2, texid[1]);
 }
@@ -151,13 +178,14 @@ void specialKeyboard(int key, int x, int y)
 		{
 			time_t start,end;
 			time (&start);
-			FeatureDefinition myBestFit = myTree.MaximizeInfoGain(*p);
+			//FeatureDefinition myBestFit = myTree.MaximizeInfoGain(*p);
+			myTree.CreateTree(p);
 			time (&end);
 			double dif = difftime (end,start);
-			cout << "Time to MaximizeInfoGain: " << dif << " seconds" << endl;
+			//cout << "Time to MaximizeInfoGain: " << dif << " seconds" << endl;
 
-			cout << "Defined feature > ";
-			cout << "Radius = " << myBestFit.radius << ", angle = " <<  myBestFit.angle << ", ratio = " <<  myBestFit.ratio << endl;
+			//cout << "Defined feature > ";
+			//cout << "Radius = " << myBestFit.radius << ", angle = " <<  myBestFit.angle << ", ratio = " <<  myBestFit.ratio << endl;
 		}
 		else
 		{
@@ -165,7 +193,7 @@ void specialKeyboard(int key, int x, int y)
 		}
 	}
 
-	if (key == GLUT_KEY_F3)
+	if (key == GLUT_KEY_F12)
 	{
 		cout << "Opening Image" << endl;
 		png::image<png::rgb_pixel> img("/home/igormacedo/Blender/images/color0.png");
@@ -177,6 +205,16 @@ void specialKeyboard(int key, int x, int y)
 		pixel = img[60][60];
 		cout << "RED:" << (int)pixel.red << " GREEN:" << (int)pixel.green << " BLUE:" << (int) pixel.blue << endl;
 
+	}
+
+	if(key == GLUT_KEY_F3)
+	{
+
+	}
+
+	if(key == GLUT_KEY_F4)
+	{
+		evaluateImage();
 	}
 }
 
@@ -244,11 +282,11 @@ PixelList* createPixelList()
 					pixel->color = UNDEFINED;
 				}
 
-				if (pixel->color != UNDEFINED)
-				{
+				//if (pixel->color != UNDEFINED)
+				//{
 					pList->push_back(pixel);
 					//cout << "Pixel ("<<pixel->x <<":"<<pixel->y<<"): depth=" << pixel->depth << ", color=" << pixel->color << " image:" << pixel->image << endl;
-				}
+				//}
 			}
 		}
 
@@ -256,6 +294,26 @@ PixelList* createPixelList()
 	}
 
 	return pList;
+}
+
+void evaluateImage()
+{
+	string path;
+	cout << "Type depth image path: ";
+	cin >> path;
+	cout << "Loading: " << path << endl;
+
+	png::image<rgb_pixel> image(path);
+
+
+	char* pathChar;
+	pathChar = &(path)[0];
+	//ILuint newImage;
+	img[2] = LoadImage(pathChar);
+	display();
+
+	myTree.classifyImage(image);
+
 }
 
 int main(int argc, char **argv)
