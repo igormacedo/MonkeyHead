@@ -50,71 +50,6 @@ double DecisionTree::CalculateInformationGain(PixelList l1, PixelList l2)
 			return newIG;
 }
 
-//int DecisionTree::LoadImage(string filename)
-//{
-//	ILboolean success;
-//	ILuint im;
-//
-//	//cout << "image 1 : " << im <<  endl;
-//	ilGenImages(1, &im);
-//	//cout << "image 1 : " << im <<  endl;
-//	ilBindImage(im);
-//	//cout << "Loading: " << filename << endl;
-//	string s(filename);
-//	char* path = &(s)[0];
-//
-//	success = ilLoadImage(path);
-//
-//	if(success)
-//	{
-//		success = ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
-//		if(!success)
-//		{
-//			cout << "Loading " << filename << " was unsuccessful!" << endl;
-//			cout << "Problem with ConvertImage" << endl;
-//			return -1;
-//		}
-//		else
-//		{
-//			//cout << "Loaded " << filename << " successfully!" << endl;
-//		}
-//	}
-//	else
-//	{
-//		cout << "Loading " << filename << " was unsuccessful!" << endl;
-//		cout << "Problem with ilLoadImage" << endl;
-//
-//		if(success == IL_COULD_NOT_OPEN_FILE)
-//		{
-//			cout << "Could not open file" << endl;
-//		}
-//		else if(success == IL_ILLEGAL_OPERATION)
-//		{
-//			cout << "Illegal operation" << endl;
-//		}
-//		else if(success == IL_INVALID_EXTENSION)
-//		{
-//			cout << "Invalid Extention" << endl;
-//		}
-//		else if(success == IL_INVALID_PARAM)
-//		{
-//			cout << "INvalid Parameter" << endl;
-//		}
-//		else if(success == IL_FALSE)
-//		{
-//			cout << "Simply False" << endl;
-//		}
-//		else
-//		{
-//			cout << "Unknown problem" << endl;
-//			cout << success << endl;
-//		}
-//		return -1;
-//	}
-//
-//	return im;
-//}
-
 FeatureDefinition DecisionTree::MaximizeInfoGain(PixelList pixelList){
 
 	mainFeature->clear();
@@ -129,7 +64,7 @@ FeatureDefinition DecisionTree::MaximizeInfoGain(PixelList pixelList){
 
 	thread_group.join_all();
 
-	mainFeature->entropy = totalEntropy(pixelList);
+	//mainFeature->entropy = totalEntropy(pixelList);
 
 	return *mainFeature;
 }
@@ -145,16 +80,16 @@ void DecisionTree::threadInfoGainMiximizer(PixelList pixelList, int coreNumber, 
 
 	cout << "Thread " << threadID << " started" << endl;
 
-	for(int ang = 0; ang <= (int) (2*M_PI*100); ang += (int) (M_PI_4*100))
+	for(int ang = 78; ang <= (int) (2*M_PI*100); ang += (int) (M_PI_4*100))
 	{
 		float a = ang/100.0;
 
 		cout << "Thread " << threadID << ": Trying new angle : " << a << endl;
-		for(int r = 0; r <= 80; r+= 2)
+		for(int r = 0; r <= 80; r+= 10)
 		{
 
 			//expected minimum and maximum value for ratios of pixels in the image sample
-			for(int rat = (threadID-1)*myconst; rat < (threadID*myconst); rat += 5)
+			for(int rat = (threadID-1)*myconst; rat < (threadID*myconst); rat += 10)
 			{
 				FeatureDefinition newFeature(r,a, rat/100.0);
 
@@ -256,14 +191,16 @@ void DecisionTree::CreateTree(PixelList* pList)
 		TreeNode* node = myQueue.front();
 		myQueue.pop_front();
 
-		cout << "Maximizing information gain for node in level " << node->level << endl;
-		FeatureDefinition feature = MaximizeInfoGain(*node->pList);
+		double entropy = totalEntropy(*node->pList);
 
-		cout << "Feature definition:: << infoGain: " << feature.infoGain;
-		cout << "Node level" << node->level << endl;
-
-		if(feature.entropy > 0 && node->level < 8)
+		if(entropy > 0 && node->level < 10)
 		{
+			cout << "Maximizing information gain for node in level " << node->level << endl;
+			FeatureDefinition feature = MaximizeInfoGain(*node->pList);
+
+			cout << "Feature definition:: << infoGain: " << feature.infoGain;
+			cout << "Node level" << node->level << endl;
+
 			TreeNode* left = new TreeNode(node->level + 1, node);
 			TreeNode* right = new TreeNode(node->level + 1, node);
 
@@ -305,8 +242,9 @@ Color DecisionTree::defineColor(TreeNode* node)
 
 }
 
-void DecisionTree::classifyImage(image<rgb_pixel> depthImage)
+void DecisionTree::classifyImage(string path, string outputPath)
 {
+	image<rgb_pixel> depthImage(path);
 	image<rgb_pixel> newImage(160,120);
 
 	for(int row = 0; row < (int)depthImage.get_height(); row++){
@@ -329,7 +267,6 @@ void DecisionTree::classifyImage(image<rgb_pixel> depthImage)
 
 				if((x < 160 && y < 120) && (x >= 0 && y >= 0))
 				{
-					//cout << "here inside if" << endl;
 					ratio = ((int) depthImage[y][x].red)/(float) depthImage[row][col].red;
 				}
 				else
@@ -337,16 +274,12 @@ void DecisionTree::classifyImage(image<rgb_pixel> depthImage)
 					ratio = 0;
 				}
 
-				//cout << "comparing ration" << endl;
-				//Compare with feature ration
 				if(ratio >= feature.ratio)
 				{
-					//rightList->push_back(*it);
 					node = node->rightNode;
 				}
 				else
 				{
-					//leftList->push_back(*it);
 					node = node->leftNode;
 				}
 			}
@@ -382,6 +315,6 @@ void DecisionTree::classifyImage(image<rgb_pixel> depthImage)
 		}
 	}
 
-	cout << "writing image to /home/igormacedo/Blender/newImage.png" << endl;
-	newImage.write(string("/home/igormacedo/Blender/newImage.png"));
+	cout << "writing image to" << outputPath << endl;
+	newImage.write(outputPath);
 }

@@ -179,7 +179,7 @@ public:
 	virtual ~DecisionTree();
 	FeatureDefinition MaximizeInfoGain(PixelList);
 	void CreateTree(PixelList*);
-	void classifyImage(png::image<rgb_pixel>);
+	void classifyImage(string, string);
 
 private:
 	TreeNode* head;

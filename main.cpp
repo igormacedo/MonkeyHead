@@ -168,7 +168,6 @@ void specialKeyboard(int key, int x, int y)
 	}
 	if (key == GLUT_KEY_F2)
 	{
-		//createDecisionTree();
 		clock_t start = clock();
 		PixelList* p = createPixelList();
 		cout << "Time to create pixel list: " << ((clock() - start) / (float)CLOCKS_PER_SEC) << endl;
@@ -182,10 +181,7 @@ void specialKeyboard(int key, int x, int y)
 			myTree.CreateTree(p);
 			time (&end);
 			double dif = difftime (end,start);
-			//cout << "Time to MaximizeInfoGain: " << dif << " seconds" << endl;
-
-			//cout << "Defined feature > ";
-			//cout << "Radius = " << myBestFit.radius << ", angle = " <<  myBestFit.angle << ", ratio = " <<  myBestFit.ratio << endl;
+			cout << "Time to create Decision Tree: " << dif << " seconds" << endl;
 		}
 		else
 		{
@@ -222,7 +218,7 @@ PixelList* createPixelList()
 {
 	PixelList* pList = new PixelList();
 
-	for(int im = 0; im < 25; im++)
+	for(int im = 0; im < 8; im++)
 	{
 		ostringstream st;
 		st << im;
@@ -244,16 +240,15 @@ PixelList* createPixelList()
 		int imageHeight = ilGetInteger(IL_IMAGE_HEIGHT);
 
 		cout << "Creating pixels... " << endl;
-		for(int x = 0; x <= imageWidth; x++)
+		for(int y = 0; y <= imageHeight; y = y+2)
 		{
-			for(int y = 0; y <= imageHeight; y++)
+			for(int x = 0; x <= imageWidth; x = x+2)
 			{
 
 				ilBindImage(img[1]);
 				ILuint depthPixel;
 				ilCopyPixels(x,y,0,1,1,1,IL_RGB,IL_UNSIGNED_BYTE,&depthPixel);
 
-				//Pixel* pixel = (Pixel*)malloc(sizeof(Pixel));
 				Pixel* pixel = new Pixel;
 				pixel->depth = ((depthPixel) & 0xFF);
 				pixel->x = x;
@@ -280,6 +275,7 @@ PixelList* createPixelList()
 				else
 				{
 					pixel->color = UNDEFINED;
+					x = x+5; //Jump pixels
 				}
 
 				//if (pixel->color != UNDEFINED)
@@ -298,28 +294,21 @@ PixelList* createPixelList()
 
 void evaluateImage()
 {
-	string path;
-	cout << "Type depth image path: ";
-	cin >> path;
-	cout << "Loading: " << path << endl;
+	int quantity;
+	cout << "Classifying images until:  ";
+	cin >> quantity;
 
-	png::image<rgb_pixel> image(path);
-
-
-	char* pathChar;
-	pathChar = &(path)[0];
-	//ILuint newImage;
-	img[2] = LoadImage(pathChar);
-	display();
-
-	myTree.classifyImage(image);
+	for(int im = 0; im < quantity; im++)
+	{
+		ostringstream st;
+		st << im;
+		myTree.classifyImage(dPath + st.str() + string(".png"), string("/home/igormacedo/Blender/newImage") + st.str() + string(".png"));
+	}
 
 }
 
 int main(int argc, char **argv)
 {
-	//GLuint texid;
-	//int image;
 
 	if( argc < 1)
 	{
@@ -362,16 +351,6 @@ int main(int argc, char **argv)
 	}
 
 	display();
-
-//	ilBindImage(image[0]);
-//	ILuint Data;
-//	ilCopyPixels(81,80,0,1,1,1,IL_RGB,IL_UNSIGNED_BYTE,&Data);
-//
-//
-//
-//	cout << "R: > " << ((Data) & 0xFF) << endl;
-//	cout << "G: > " << ((Data >> 8 ) & 0xFF) << endl;
-//	cout << "B: > " << ((Data >> 16 ) & 0xFF) << endl;
 
     glutMainLoop();
 
