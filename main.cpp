@@ -218,7 +218,7 @@ PixelList* createPixelList()
 {
 	PixelList* pList = new PixelList();
 
-	for(int im = 0; im < 8; im++)
+	for(int im = 0; im < 24; im++)
 	{
 		ostringstream st;
 		st << im;
@@ -242,7 +242,7 @@ PixelList* createPixelList()
 		cout << "Creating pixels... " << endl;
 		for(int y = 0; y <= imageHeight; y = y+2)
 		{
-			for(int x = 0; x <= imageWidth; x = x+2)
+			for(int x = 0; x <= imageWidth; x = x+3)
 			{
 
 				ilBindImage(img[1]);
@@ -275,7 +275,7 @@ PixelList* createPixelList()
 				else
 				{
 					pixel->color = UNDEFINED;
-					x = x+5; //Jump pixels
+					x = x+30; //Jump pixels
 				}
 
 				//if (pixel->color != UNDEFINED)

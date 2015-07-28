@@ -99,9 +99,9 @@ typedef struct PixelList
 
 typedef struct FeatureDefinition
 {
-	int radius;
-	float angle;
-	float ratio;
+	int x1,y1,x2,y2;
+	//float angle;
+	int diff;
 	double infoGain;
 	PixelList* rightList = NULL;
 	PixelList* leftList = NULL;
@@ -109,33 +109,25 @@ typedef struct FeatureDefinition
 
 	FeatureDefinition()
 	{
-		this->radius = 0;
-		this->angle = 0.0;
-		this->ratio = 0.0;
+		this->x1 = 0; this->y1 = 0;
+		this->x2 = 0; this->y2 = 0;
+		this->diff = 0;
 		this->infoGain = 0.0;
 	}
 
-	FeatureDefinition(int radius, float angle)
+	FeatureDefinition(int x1, int y1, int x2, int y2, int diff)
 	{
-		this->radius = radius;
-		this->angle = angle;
-		this->ratio = 0.0;
-		this->infoGain = 0.0;
-	}
-
-	FeatureDefinition(int radius, float angle, float ratio)
-	{
-		this->radius = radius;
-		this->angle = angle;
-		this->ratio = ratio;
-		this->infoGain = 0.0;
+		this->x1 = x1; this->y1 = y1;
+		this->x2 = x2; this->y2 = y2;
+		this->diff = diff;
+		this->infoGain = 0;
 	}
 
 	void clear()
 	{
-		this->radius = 0;
-		this->angle = 0.0;
-		this->ratio = 0.0;
+		this->x1 = 0; this->y1 = 0;
+		this->x2 = 0; this->y2 = 0;
+		this->diff = 0;
 		this->infoGain = DBL_MAX;
 		this->entropy = 0.0;
 		this->rightList = NULL;

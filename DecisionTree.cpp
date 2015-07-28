@@ -9,7 +9,7 @@
 
 //int div = (225-45)/30;
 
-FeatureDefinition *mainFeature = new FeatureDefinition(0,0.0);
+FeatureDefinition *mainFeature = new FeatureDefinition();
 
 boost::mutex mtx_;
 
@@ -53,7 +53,7 @@ double DecisionTree::CalculateInformationGain(PixelList l1, PixelList l2)
 FeatureDefinition DecisionTree::MaximizeInfoGain(PixelList pixelList){
 
 	mainFeature->clear();
-	int numberOfThreads = boost::thread::hardware_concurrency() - 1;
+	int numberOfThreads = boost::thread::hardware_concurrency();
 	cout << "CoreNumber: " << numberOfThreads << endl;
 
 	boost::thread_group thread_group;
@@ -76,93 +76,116 @@ void DecisionTree::threadInfoGainMiximizer(PixelList pixelList, int coreNumber, 
 	string depthPath("/home/igormacedo/Blender/images/depth");
 	double mainInfoGain = DBL_MAX;
 
-	int myconst = (int) 255/coreNumber;
+
+	int myconst = (int) 510/(coreNumber);
+	//myconst = (threadID > coreNumber/2)? myconst: -myconst;
+	//int multiplier = (int) threadID%(coreNumber/2);
 
 	cout << "Thread " << threadID << " started" << endl;
 
-	for(int ang = 78; ang <= (int) (2*M_PI*100); ang += (int) (M_PI_4*100))
-	{
-		float a = ang/100.0;
+//	for(int ang = 78; ang <= (int) (2*M_PI*100); ang += (int) (M_PI_4*100))
+//	{
+//		float a = ang/100.0;
+//
+//		cout << "Thread " << threadID << ": Trying new angle : " << a << endl;
+//		for(int r = 0; r <= 80; r+= 10)
+//		{
+//
+//			//expected minimum and maximum value for ratios of pixels in the image sample
+//			for(unsigned int rat = (threadID-1)*myconst; rat < (threadID*myconst); rat += 10)
+//			{
 
-		cout << "Thread " << threadID << ": Trying new angle : " << a << endl;
-		for(int r = 0; r <= 80; r+= 10)
-		{
+	for(int x1 = -80; x1 <= 80; x1 += 20){
+		cout << "Thread " << threadID << ": Trying new x1: " << x1 << endl;
+		for(int y1 = -60; y1 <= 60; y1 += 20){
 
-			//expected minimum and maximum value for ratios of pixels in the image sample
-			for(int rat = (threadID-1)*myconst; rat < (threadID*myconst); rat += 10)
-			{
-				FeatureDefinition newFeature(r,a, rat/100.0);
+			//Second pixel for comparison
+			//for(int x2 = -80; x2 <= 80; x2 += 40){
+				//for(int y2 = -60; y2 <= 60; y2 += 30){
 
-				PixelList* rightList = new PixelList;
-				PixelList* leftList = new PixelList;
+					for(int diff = (threadID-1)*myconst; diff < (threadID*myconst); diff +=10){
 
-				png::image<png::rgb_pixel> img;
-				int image = -1;
+						int x2 = 0, y2 = 0;
+						FeatureDefinition newFeature(x1,y1,x2,y2,diff-255);
 
-				for(list<Pixel*>::iterator it = pixelList.pList.begin(); it != pixelList.pList.end(); it++)
-				{
+						PixelList* rightList = new PixelList;
+						PixelList* leftList = new PixelList;
 
-					if((*it)->image != image)
-					{
-						image = (*it)->image;
-						ostringstream st;
-						st << image;
-						string path = depthPath + st.str() + string(".png");
+						png::image<png::rgb_pixel> img;
+						int image = -1;
 
-						img.read(path);
+						for(list<Pixel*>::iterator it = pixelList.pList.begin(); it != pixelList.pList.end(); it++)
+						{
+
+							if((*it)->image != image)
+							{
+								image = (*it)->image;
+								ostringstream st;
+								st << image;
+								string path = depthPath + st.str() + string(".png");
+
+								img.read(path);
+							}
+
+							int difference;
+
+							//int x = (int) (cos(a)*r + (*it)->x);
+							//int y = (int) (sin(a)*r + (*it)->y);
+							int xa = (*it)->x + x1;
+							int ya = (*it)->y + y1;
+							int xb = (*it)->x + x2;
+							int yb = (*it)->y + y2;
+
+							if((xa < 160 && ya < 120) && (xa >= 0 && ya >= 0) && (xb < 160 && yb < 120) && (xb >= 0 && yb >= 0))
+							{
+
+								rgb_pixel depthPixel1 = img[ya][xa];
+								rgb_pixel depthPixel2 = img[yb][xb];
+								difference = depthPixel2.red - depthPixel1.red;
+							}
+							else
+							{
+								difference = -256;
+							}
+
+							if(difference >= newFeature.diff)
+							{
+								rightList->push_back(*it);
+							}
+							else
+							{
+								leftList->push_back(*it);
+							}
+
+						}
+
+						double newInfoGain = CalculateInformationGain(*leftList, *rightList);
+						newFeature.infoGain = newInfoGain;
+						newFeature.rightList = rightList;
+						newFeature.leftList = leftList;
+
+						bool changeFlag = false;
+						if(newInfoGain < mainInfoGain){
+							if(updateMainFeature(newFeature)){
+								cout << "Thread " << threadID << ": new MAIN infoGAIN: " << mainInfoGain << endl;
+								cout << "   Right list count: red=" << rightList->red << ", green=" << rightList->green <<", blue=" << rightList->blue <<", undef=" << rightList->undedefined<<endl;
+								cout << "   Left list count: red=" << leftList->red << ", green=" << leftList->green <<", blue=" << leftList->blue <<", undef=" << leftList->undedefined<<endl;
+								changeFlag = true;
+							}
+
+							mainInfoGain = newInfoGain;
+						}
+
+						if(!changeFlag){
+							delete(rightList);
+							delete(leftList);
+						}
 					}
-
-					float ratio;
-
-					int x = (int) (cos(a)*r + (*it)->x);
-					int y = (int) (sin(a)*r + (*it)->y);
-
-					if((x < 160 && y < 120) && (x >= 0 && y >= 0))
-					{
-						rgb_pixel depthPixel = img[y][x];
-						ratio = ((int) depthPixel.red)/(float) ((*it)->depth);
-					}
-					else
-					{
-						ratio = 0;
-					}
-
-					if(ratio >= newFeature.ratio)
-					{
-						rightList->push_back(*it);
-					}
-					else
-					{
-						leftList->push_back(*it);
-					}
-
-				}
-
-				double newInfoGain = CalculateInformationGain(*leftList, *rightList);
-				newFeature.infoGain = newInfoGain;
-				newFeature.rightList = rightList;
-				newFeature.leftList = leftList;
-
-				bool changeFlag = false;
-				if(newInfoGain < mainInfoGain){
-					if(updateMainFeature(newFeature)){
-						cout << "Thread " << threadID << ": new MAIN infoGAIN: " << mainInfoGain << endl;
-						cout << "   Right list count: red=" << rightList->red << ", green=" << rightList->green <<", blue=" << rightList->blue <<", undef=" << rightList->undedefined<<endl;
-						cout << "   Left list count: red=" << leftList->red << ", green=" << leftList->green <<", blue=" << leftList->blue <<", undef=" << leftList->undedefined<<endl;
-						changeFlag = true;
-					}
-
-					mainInfoGain = newInfoGain;
-				}
-
-				if(!changeFlag){
-					delete(rightList);
-					delete(leftList);
 				}
 			}
 		}
-	}
-}
+	//}
+//}
 
 bool DecisionTree::updateMainFeature(FeatureDefinition f)
 {
@@ -193,7 +216,7 @@ void DecisionTree::CreateTree(PixelList* pList)
 
 		double entropy = totalEntropy(*node->pList);
 
-		if(entropy > 0 && node->level < 10)
+		if(entropy > 0 && node->level <= 13)
 		{
 			cout << "Maximizing information gain for node in level " << node->level << endl;
 			FeatureDefinition feature = MaximizeInfoGain(*node->pList);
@@ -257,24 +280,30 @@ void DecisionTree::classifyImage(string path, string outputPath)
 
 				//cout << "here2" << endl;
 				FeatureDefinition feature = node->feature;
-				float a = feature.angle;
-				int r = feature.radius;
+				int x1 = feature.x1; int y1 = feature.y1;
+				int x2 = feature.x2; int y2 = feature.y2;
 
-				float ratio;
+				int diff;
 
-				int x = (int) (cos(a)*r + col);
-				int y = (int) (sin(a)*r + row);
+				//int x = (int) (cos(a)*r + (*it)->x);
+				//int y = (int) (sin(a)*r + (*it)->y);
+				int xa = col + x1;
+				int ya = row + y1;
+				int xb = col + x2;
+				int yb = row + y2;
 
-				if((x < 160 && y < 120) && (x >= 0 && y >= 0))
+				if((xa < 160 && ya < 120) && (xa >= 0 && ya >= 0) && (xb < 160 && yb < 120) && (xb >= 0 && yb >= 0))
 				{
-					ratio = ((int) depthImage[y][x].red)/(float) depthImage[row][col].red;
+					rgb_pixel depthPixel1 = depthImage[ya][xa];
+					rgb_pixel depthPixel2 = depthImage[yb][xb];
+					diff = depthPixel2.red - depthPixel1.red;
 				}
 				else
 				{
-					ratio = 0;
+					diff = -256;
 				}
 
-				if(ratio >= feature.ratio)
+				if(diff >= feature.diff)
 				{
 					node = node->rightNode;
 				}
