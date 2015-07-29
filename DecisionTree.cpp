@@ -216,7 +216,7 @@ void DecisionTree::CreateTree(PixelList* pList)
 
 		double entropy = totalEntropy(*node->pList);
 
-		if(entropy > 0 && node->level <= 13)
+		if(entropy > 0 && node->level <= 8)
 		{
 			cout << "Maximizing information gain for node in level " << node->level << endl;
 			FeatureDefinition feature = MaximizeInfoGain(*node->pList);
@@ -265,6 +265,48 @@ Color DecisionTree::defineColor(TreeNode* node)
 
 }
 
+Color DecisionTree::classifyPixel(int col, int row, image<rgb_pixel> depthImage)
+{
+	TreeNode* node = this->head;
+
+	while(node->leftNode != NULL){
+
+		//cout << "here2" << endl;
+		FeatureDefinition feature = node->feature;
+		int x1 = feature.x1; int y1 = feature.y1;
+		int x2 = feature.x2; int y2 = feature.y2;
+
+		int diff;
+
+		int xa = col + x1;
+		int ya = row + y1;
+		int xb = col + x2;
+		int yb = row + y2;
+
+		if((xa < 160 && ya < 120) && (xa >= 0 && ya >= 0) && (xb < 160 && yb < 120) && (xb >= 0 && yb >= 0))
+		{
+			rgb_pixel depthPixel1 = depthImage[ya][xa];
+			rgb_pixel depthPixel2 = depthImage[yb][xb];
+			diff = depthPixel2.red - depthPixel1.red;
+		}
+		else
+		{
+			diff = -256;
+		}
+
+		if(diff >= feature.diff)
+		{
+			node = node->rightNode;
+		}
+		else
+		{
+			node = node->leftNode;
+		}
+	}
+
+	return defineColor(node);
+}
+
 void DecisionTree::classifyImage(string path, string outputPath)
 {
 	image<rgb_pixel> depthImage(path);
@@ -273,48 +315,50 @@ void DecisionTree::classifyImage(string path, string outputPath)
 	for(int row = 0; row < (int)depthImage.get_height(); row++){
 		for(int col = 0; col < (int)depthImage.get_width(); col++){
 
-			//cout << "here1" << endl;
-			TreeNode* node = this->head;
+//			//cout << "here1" << endl;
+//			TreeNode* node = this->head;
+//
+//			while(node->leftNode != NULL){
+//
+//				//cout << "here2" << endl;
+//				FeatureDefinition feature = node->feature;
+//				int x1 = feature.x1; int y1 = feature.y1;
+//				int x2 = feature.x2; int y2 = feature.y2;
+//
+//				int diff;
+//
+//				//int x = (int) (cos(a)*r + (*it)->x);
+//				//int y = (int) (sin(a)*r + (*it)->y);
+//				int xa = col + x1;
+//				int ya = row + y1;
+//				int xb = col + x2;
+//				int yb = row + y2;
+//
+//				if((xa < 160 && ya < 120) && (xa >= 0 && ya >= 0) && (xb < 160 && yb < 120) && (xb >= 0 && yb >= 0))
+//				{
+//					rgb_pixel depthPixel1 = depthImage[ya][xa];
+//					rgb_pixel depthPixel2 = depthImage[yb][xb];
+//					diff = depthPixel2.red - depthPixel1.red;
+//				}
+//				else
+//				{
+//					diff = -256;
+//				}
+//
+//				if(diff >= feature.diff)
+//				{
+//					node = node->rightNode;
+//				}
+//				else
+//				{
+//					node = node->leftNode;
+//				}
+//			}
 
-			while(node->leftNode != NULL){
-
-				//cout << "here2" << endl;
-				FeatureDefinition feature = node->feature;
-				int x1 = feature.x1; int y1 = feature.y1;
-				int x2 = feature.x2; int y2 = feature.y2;
-
-				int diff;
-
-				//int x = (int) (cos(a)*r + (*it)->x);
-				//int y = (int) (sin(a)*r + (*it)->y);
-				int xa = col + x1;
-				int ya = row + y1;
-				int xb = col + x2;
-				int yb = row + y2;
-
-				if((xa < 160 && ya < 120) && (xa >= 0 && ya >= 0) && (xb < 160 && yb < 120) && (xb >= 0 && yb >= 0))
-				{
-					rgb_pixel depthPixel1 = depthImage[ya][xa];
-					rgb_pixel depthPixel2 = depthImage[yb][xb];
-					diff = depthPixel2.red - depthPixel1.red;
-				}
-				else
-				{
-					diff = -256;
-				}
-
-				if(diff >= feature.diff)
-				{
-					node = node->rightNode;
-				}
-				else
-				{
-					node = node->leftNode;
-				}
-			}
+			Color color = classifyPixel(col, row, depthImage);
 
 			//cout << "defining color of the pixel" << endl;
-			switch(defineColor(node))
+			switch(color)
 			{
 				case RED:
 					//cout << "it is red" << endl;

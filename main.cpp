@@ -4,6 +4,7 @@
 #include <chrono>
 #include <thread>
 #include <ctime>
+#include <cstdlib>
 #include <png++/png.hpp>
 #include "DecisionTree.h"
 
@@ -19,21 +20,23 @@ int height = DEFAULT_HEIGHT;
 
 GLuint texid[4];
 ILuint img[4];
+set<int> usedImages;
 
 bool fullscreen = false;
 
-DecisionTree myTree;
+DecisionTree myTree1, myTree2, myTree3;
 
 string cPath("/home/igormacedo/Blender/images/color");
 string dPath("/home/igormacedo/Blender/images/depth");
 
 
-PixelList* createPixelList();
+PixelList* createPixelList(int numberOfImages, int maxNumber);
 void display();
 void init(int width, int height);
 int LoadImage(char* filename);
 void specialKeyboard(int key, int x, int y);
-void evaluateImage();
+void evaluateImagewithSingleTree();
+void evaluateImagewithForest();
 
 void display()
 {
@@ -169,19 +172,42 @@ void specialKeyboard(int key, int x, int y)
 	if (key == GLUT_KEY_F2)
 	{
 		clock_t start = clock();
-		PixelList* p = createPixelList();
-		cout << "Time to create pixel list: " << ((clock() - start) / (float)CLOCKS_PER_SEC) << endl;
-		cout << "PixelList size: " << p->size() << endl;
+		usedImages.clear();
 
-		if(!p->isEmpty())
+		PixelList* p1 = createPixelList(8,25);
+		PixelList* p2 = createPixelList(8,25);
+		PixelList* p3 = createPixelList(9,25);
+		cout << "Time to create pixel list: " << ((clock() - start) / (float)CLOCKS_PER_SEC) << endl;
+		cout << "PixelList size: " << p1->size() << endl;
+
+		if(!p1->isEmpty() && !p2->isEmpty() && !p3->isEmpty())
 		{
-			time_t start,end;
+			time_t start,end, startTotal, endTotal;
 			time (&start);
+			time (&startTotal);
 			//FeatureDefinition myBestFit = myTree.MaximizeInfoGain(*p);
-			myTree.CreateTree(p);
+			cout << "================================    Creating TREE 1 ======================================================================" << endl;
+			myTree1.CreateTree(p1);
 			time (&end);
 			double dif = difftime (end,start);
 			cout << "Time to create Decision Tree: " << dif << " seconds" << endl;
+
+			time (&start);
+			cout << "================================    Creating TREE 2 ======================================================================" << endl;
+			myTree2.CreateTree(p2);
+			time (&end);
+			dif = difftime (end,start);
+			cout << "Time to create Decision Tree: " << dif << " seconds" << endl;
+
+			time (&start);
+			cout << "================================    Creating TREE 3 ======================================================================" << endl;
+			myTree3.CreateTree(p3);
+			time (&end);
+			time (&endTotal);
+			dif = difftime (end,start);
+			cout << "Time to create Decision Tree: " << dif << " seconds" << endl;
+			dif = difftime (endTotal,startTotal);
+			cout << "Time to create complete Decision Forest: " << dif << " seconds" << endl;
 		}
 		else
 		{
@@ -189,48 +215,44 @@ void specialKeyboard(int key, int x, int y)
 		}
 	}
 
-	if (key == GLUT_KEY_F12)
-	{
-		cout << "Opening Image" << endl;
-		png::image<png::rgb_pixel> img("/home/igormacedo/Blender/images/color0.png");
-
-		rgb_pixel pixel = img[119][159];
-		cout << "RED:" << (int)pixel.red << " GREEN:" << (int)pixel.green << " BLUE:" << (int) pixel.blue << endl;
-
-		img.read("/home/igormacedo/Blender/images/color12.png");
-		pixel = img[60][60];
-		cout << "RED:" << (int)pixel.red << " GREEN:" << (int)pixel.green << " BLUE:" << (int) pixel.blue << endl;
-
-	}
-
 	if(key == GLUT_KEY_F3)
 	{
-
+		evaluateImagewithSingleTree();
 	}
 
 	if(key == GLUT_KEY_F4)
 	{
-		evaluateImage();
+		evaluateImagewithForest();
 	}
 }
 
-PixelList* createPixelList()
+PixelList* createPixelList(int numberOfImages, int maxNumber)
 {
 	PixelList* pList = new PixelList();
+	int imageCounter = 0;
+	ILuint imge[2];
+	//for(int im = 0; im < 24; im++)
+	//{
+	while(imageCounter < numberOfImages){
 
-	for(int im = 0; im < 24; im++)
-	{
+		int im;
+		do{
+			im = rand() % maxNumber;
+		}while(usedImages.find(im) != usedImages.end());
+		imageCounter++;
+
+
 		ostringstream st;
 		st << im;
 
 		char* path;
 		path = &(cPath + st.str() + string(".png"))[0];
-		img[0] = LoadImage(path);
+		imge[0] = LoadImage(path);
 
 		path = &(dPath + st.str() + string(".png"))[0];
-		img[1] = LoadImage(path);
+		imge[1] = LoadImage(path);
 
-		if(img[0] == -1 || img[1] == -1)
+		if(imge[0] == -1 || imge[1] == -1)
 		{
 			PixelList* p;
 			return p;
@@ -240,12 +262,12 @@ PixelList* createPixelList()
 		int imageHeight = ilGetInteger(IL_IMAGE_HEIGHT);
 
 		cout << "Creating pixels... " << endl;
-		for(int y = 0; y <= imageHeight; y = y+2)
+		for(int y = 0; y <= imageHeight; y = y+1)
 		{
-			for(int x = 0; x <= imageWidth; x = x+3)
+			for(int x = 0; x <= imageWidth; x = x+2)
 			{
 
-				ilBindImage(img[1]);
+				ilBindImage(imge[1]);
 				ILuint depthPixel;
 				ilCopyPixels(x,y,0,1,1,1,IL_RGB,IL_UNSIGNED_BYTE,&depthPixel);
 
@@ -256,7 +278,7 @@ PixelList* createPixelList()
 				pixel->image = im;
 
 				ILuint colorPixel;
-				ilBindImage(img[0]);
+				ilBindImage(imge[0]);
 				ilCopyPixels(x,y,0,1,1,1,IL_RGB,IL_UNSIGNED_BYTE,&colorPixel);
 
 
@@ -286,13 +308,13 @@ PixelList* createPixelList()
 			}
 		}
 
-		ilDeleteImages(2, img);
+		ilDeleteImages(2, imge);
 	}
 
 	return pList;
 }
 
-void evaluateImage()
+void evaluateImagewithSingleTree()
 {
 	int quantity;
 	cout << "Classifying images until:  ";
@@ -302,7 +324,88 @@ void evaluateImage()
 	{
 		ostringstream st;
 		st << im;
-		myTree.classifyImage(dPath + st.str() + string(".png"), string("/home/igormacedo/Blender/newImage") + st.str() + string(".png"));
+		myTree1.classifyImage(dPath + st.str() + string(".png"), string("/home/igormacedo/Blender/newImage") + st.str() + string(".png"));
+	}
+
+}
+
+Color getColor(Color c1, Color c2, Color c3)
+{
+	if((c1 == RED && c2 == RED) || (c1 == RED && c3 == RED) || (c3 == RED && c2 == RED))
+	{
+		return RED;
+	}
+	else if((c1 == GREEN && c2 == GREEN) || (c1 == GREEN && c3 == GREEN) || (c3 == GREEN && c2 == GREEN))
+	{
+		return GREEN;
+	}
+	else if((c1 == BLUE && c2 == BLUE) || (c1 == BLUE && c3 == BLUE) || (c3 == BLUE && c2 == BLUE))
+	{
+		return BLUE;
+	}
+	else
+	{
+		return UNDEFINED;
+	}
+}
+
+void evaluateImagewithForest()
+{
+	int quantity;
+	cout << "Classifying images until: ";
+	cin >> quantity;
+
+	for(int im = 0; im < quantity; im++)
+	{
+		ostringstream st;
+		st << im;
+
+		image<rgb_pixel> depthImage(dPath + st.str() + string(".png"));
+		image<rgb_pixel> newImage(160,120);
+
+		for(int row = 0; row < (int)depthImage.get_height(); row++){
+			for(int col = 0; col < (int)depthImage.get_width(); col++){
+
+				Color color1 = myTree1.classifyPixel(col, row, depthImage);
+				Color color2 = myTree2.classifyPixel(col, row, depthImage);
+				Color color3 = myTree3.classifyPixel(col, row, depthImage);
+
+				Color color = getColor(color1,color2,color3);
+
+				switch(color)
+				{
+					case RED:
+						//cout << "it is red" << endl;
+						newImage[row][col].red = 255;
+						newImage[row][col].green = 0;
+						newImage[row][col].blue = 0;
+						break;
+					case GREEN:
+						//cout << "it is green" << endl;
+						newImage[row][col].red = 0;
+						newImage[row][col].green = 255;
+						newImage[row][col].blue = 0;
+						break;
+					case BLUE:
+						//cout << "it is blue" << endl;
+						newImage[row][col].red = 0;
+						newImage[row][col].green = 0;
+						newImage[row][col].blue = 255;
+						break;
+					case UNDEFINED:
+						//cout << "it is undefined" << endl;
+						newImage[row][col].red = 200;
+						newImage[row][col].green = 200;
+						newImage[row][col].blue = 200;
+						break;
+				}
+			}
+		}
+
+		string outputPath = string("/home/igormacedo/Blender/newImage") + st.str() + string(".png");
+		cout << "writing image to" << outputPath << endl;
+		newImage.write(outputPath);
+
 	}
 
 }

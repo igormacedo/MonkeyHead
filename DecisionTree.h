@@ -172,6 +172,7 @@ public:
 	FeatureDefinition MaximizeInfoGain(PixelList);
 	void CreateTree(PixelList*);
 	void classifyImage(string, string);
+	Color classifyPixel(int, int, image<rgb_pixel>);
 
 private:
 	TreeNode* head;
